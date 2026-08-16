@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    _META_CHARSET_UTF8
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>緣份特快車 - 會員資料填寫</title>
+    <style>
+        body { font-family: sans-serif; background-color: #f7f9fc; margin: 0; padding: 20px; color: #333; }
+        .container { max-width: 500px; margin: 0 auto; background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        h2 { text-align: center; color: #d9534f; margin-bottom: 25px; }
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; font-weight: bold; }
+        input, select { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 16px; }
+        .required::after { content: " *"; color: #d9534f; }
+        .hint { font-size: 13px; color: #666; margin-top: 5px; }
+        button { width: 100%; background-color: #d9534f; color: white; border: none; padding: 14px; font-size: 18px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        button:hover { background-color: #c9302c; }
+        #success-section { display: none; text-align: center; }
+        .line-btn { display: inline-block; background-color: #06c755; color: white; padding: 14px 20px; text-decoration: none; border-radius: 6px; font-weight: bold; margin-top: 20px; font-size: 18px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div id="form-section">
+        <h2>尋覓良緣 - 會員基本資料填寫</h2>
+        <form id="matchForm">
+            <div class="form-group">
+                <label class="required">姓氏</label>
+                <input type="text" id="lastName" required placeholder="例如：陳">
+            </div>
+
+            <div class="form-group">
+                <label class="required">年次</label>
+                <select id="birthYear" required>
+                    <option value="">請選擇年次</option>
+                    <!-- 可自行擴充或動態生成 -->
+                    <script>
+                        for(let y=2006; y>=1960; y--) {
+                            document.write(`<option value="${y}">${y} 年</option>`);
+                        }
+                    </script>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>名字或暱稱</label>
+                <input type="text" id="nickName" placeholder="例如：小芬或保留真實名字">
+                <div class="hint">選填，對外顯示或稱呼使用</div>
+            </div>
+
+            <div class="form-group">
+                <label class="required">主要活動區域</label>
+                <input type="text" id="activeArea" required placeholder="例如：高雄市北高雄、左營區">
+            </div>
+
+            <div class="form-group">
+                <label class="required">個人照片</label>
+                <input type="file" id="photoFile" accept="image/*" required>
+                <div class="hint">上傳清晰生活照或半身照，僅限媒婆審核調閱</div>
+            </div>
+
+            <div class="form-group">
+                <label class="required">介紹人姓名與聯絡方式</label>
+                <input type="text" id="referrer" required placeholder="例如：王大明 / 0912-345678">
+            </div>
+
+            <button type="submit" id="submitBtn">確認送出資料</button>
+        </form>
+    </div>
+
+    <div id="success-section">
+        <h2>🎉 資料已成功提交！</h2>
+        <p>感謝您的填寫。為了完成審核並正式開通會員資格，請點擊下方按鈕加入媒婆的專屬 LINE，並告知您已完成註冊。</p>
+        <a id="lineLink" href="https://line.me/R/ti/p/@your_matchmaker_id" target="_blank" class="line-btn">點擊加入媒婆 LINE 進行開通</a>
+    </div>
+</div>
+
+<!-- Firebase 核心 SDK 引用 -->
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+
+    // 需替換為您的實際 Firebase 專案設定
+    const firebaseConfig = {
+        apiKey: "YOUR_API_KEY",
+        authDomain: "YOUR_AUTH_DOMAIN",
+        projectId: "YOUR_PROJECT_ID",
+        storageBucket: "YOUR_STORAGE_BUCKET",
+        messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+        appId: "YOUR_APP_ID"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const storage = getStorage(app);
+
+    const matchForm = document.getElementById('matchForm');
+    const submitBtn = document.getElementById('submitBtn');
+    const formSection = document.getElementById('form-section');
+    const successSection = document.getElementById('success-section');
+
+    matchForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        submitBtn.disabled = true;
+        submitBtn.textContent = '資料上傳中，請稍候...';
+
+        try {
+            const fileInput = document.getElementById('photoFile');
+            const file = fileInput.files[0];
+            
+            // 1. 上傳照片至 Cloud Storage
+            const storageRef = ref(storage, `member_photos/${Date.now()}_${file.name}`);
+            const snapshot = await uploadBytes(storageRef, file);
+            const photoUrl = await getDownloadURL(snapshot.ref);
+
+            // 2. 將結構化資料寫入 Cloud Firestore
+            await addDoc(collection(db, "members"), {
+                lastName: document.getElementById('lastName').value,
+                birthYear: document.getElementById('birthYear').value,
+                nickName: document.getElementById('nickName').value || "未填寫",
+                activeArea: document.getElementById('activeArea').value,
+                photoUrl: photoUrl,
+                referrer: document.getElementById('referrer').value,
+                status: "待審核",
+                createdAt: serverTimestamp()
+            });
+
+            // 3. 轉換介面顯示成功與引導加入 LINE
+            formSection.style.display = 'none';
+            successSection.style.display = 'block';
+
+        } catch (error) {
+            console.error("上傳失敗：", error);
+            alert("上傳過程發生錯誤，請稍後再試或直接聯繫媒婆。");
+            submitBtn.disabled = false;
+            submitBtn.textContent = '確認送出資料';
+        }
+    });
+</script>
+
+</body>
+</html>
