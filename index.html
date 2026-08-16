@@ -44,6 +44,25 @@
             </div>
 
             <div class="form-group">
+                <label class="required">生肖</label>
+                <select id="zodiac" required>
+                    <option value="">請選擇生肖</option>
+                    <option value="鼠">鼠</option>
+                    <option value="牛">牛</option>
+                    <option value="虎">虎</option>
+                    <option value="兔">兔</option>
+                    <option value="龍">龍</option>
+                    <option value="蛇">蛇</option>
+                    <option value="馬">馬</option>
+                    <option value="羊">羊</option>
+                    <option value="猴">猴</option>
+                    <option value="雞">雞</option>
+                    <option value="狗">狗</option>
+                    <option value="豬">豬</option>
+                </select>
+            </div>
+
+            <div class="form-group">
                 <label class="required">姓氏</label>
                 <input type="text" id="lastName" required placeholder="例如：陳">
             </div>
@@ -96,6 +115,12 @@
                 <div class="hint">詳細說明有助於媒婆為您精準匹配合適對象</div>
             </div>
 
+            <div class="form-group">
+                <label class="required">是否有其他民俗/年齡差距限制</label>
+                <textarea id="folkOrAgeLimit" required placeholder="例如：介意生肖相衝、長輩要求不能差幾歲、或無特別限制等"></textarea>
+                <div class="hint">請填寫詳細的民俗禁忌或年齡差距考量</div>
+            </div>
+
             <div class="section-title">🔒 照片與介紹人驗證</div>
 
             <div class="form-group">
@@ -124,7 +149,6 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    // 請記得替換為您的 Firebase 實際設定
     const firebaseConfig = {
       apiKey: "AIzaSyBz54aig2YfloKlAALvWg4wGFBQutr2YZU",
       authDomain: "wru-adim.firebaseapp.com",
@@ -143,7 +167,6 @@
     const formSection = document.getElementById('form-section');
     const successSection = document.getElementById('success-section');
 
-    // 輔助函式：圖片壓縮並轉為 Base64 字串
     function compressImage(file, maxWidth = 800, quality = 0.7) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
@@ -184,12 +207,11 @@
             const fileInput = document.getElementById('photoFile');
             const file = fileInput.files[0];
             
-            // 壓縮圖片並取得 Base64 文字
             const base64Photo = await compressImage(file);
 
-            // 直接寫入 Firestore (零成本、免開通 Storage)
             await addDoc(collection(db, "members"), {
                 birthYear: document.getElementById('birthYear').value,
+                zodiac: document.getElementById('zodiac').value,
                 lastName: document.getElementById('lastName').value,
                 nickName: document.getElementById('nickName').value || "未填寫",
                 gender: document.getElementById('gender').value,
@@ -198,6 +220,7 @@
                 occupation: document.getElementById('occupation').value || "未填寫",
                 maritalStatus: document.getElementById('maritalStatus').value,
                 partnerRequirements: document.getElementById('partnerRequirements').value,
+                folkOrAgeLimit: document.getElementById('folkOrAgeLimit').value,
                 photoBase64: base64Photo,
                 referrer: document.getElementById('referrer').value,
                 status: "待審核",
